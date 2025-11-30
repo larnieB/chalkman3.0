@@ -1,5 +1,5 @@
 {
-  "name": "My Web App",
+  "name": "chalkMan",
   "short_name": "chalkMan",
   "start_url": "/chalkman3.0/",
   "display": "standalone",
@@ -19,6 +19,7 @@
     }
   ]
 }
+
 
 
 
