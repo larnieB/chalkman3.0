@@ -1,7 +1,7 @@
 {
   "name": "My Web App",
   "short_name": "MyApp",
-  "start_url": "/chalkman3.0/"
+  "start_url": "/chalkman3.0/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
@@ -19,4 +19,5 @@
     }
   ]
 }
+
 
