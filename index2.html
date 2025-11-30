@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pool Game Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+  <div class="bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400">🎱 Pool Game Calculator</h1>
+    
+    <form id="poolForm" class="space-y-4">
+      <!-- Did chalkman open -->
+      <div class="flex items-center">
+        <input id="chalkmanOpened" type="checkbox" class="mr-2">
+        <label for="chalkmanOpened">Did the chalkman open the game?</label>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Individual Stake (Ksh)</label>
+        <input id="stake" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 100" required>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Number of Players</label>
+        <input id="players" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 5" required>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Chalkman Payment (auto-calculated)</label>
+        <input id="chalkmanPay" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" readonly>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Debt (Ksh)</label>
+        <input id="debt" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 0" required>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Players not “eaten”</label>
+        <input id="notEaten" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 1" required>
+      </div>
+
+      <div class="flex items-center">
+        <input id="playNext" type="checkbox" class="mr-2">
+        <label for="playNext">Will the winner play the next game?</label>
+      </div>
+
+      <div id="nextGameStakeDiv" class="hidden">
+        <label class="block text-sm mb-1">Next Game Stake (Ksh)</label>
+        <input id="nextGameStake" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 100">
+      </div>
+
+      <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-lg font-semibold">
+        Calculate
+      </button>
+    </form>
+
+    <div id="result" class="mt-6 hidden bg-gray-700 p-4 rounded-lg">
+      <h2 class="text-xl font-semibold mb-2 text-emerald-400">Results</h2>
+      <p id="totalStake"></p>
+      <p id="winnerAmount"></p>
+      <p id="chalkmanPaid"></p>
+      <p id="finalAmount"></p>
+    </div>
+  </div>
+
+  <script>
+  // --- Terms modal logic ---
+  const termsModal = document.getElementById("termsModal");
+  const agreeBtn = document.getElementById("agreeBtn");
+  const disagreeBtn = document.getElementById("disagreeBtn");
+  const appContent = document.getElementById("appContent");
+
+  agreeBtn.addEventListener("click", () => {
+    termsModal.classList.add("hidden");
+    appContent.classList.remove("hidden");
+  });
+
+  disagreeBtn.addEventListener("click", () => {
+    alert("You must agree to continue. The app will now close.");
+    window.close();
+    window.location.href = "about:blank";
+  });
+
+  // --- Calculator logic ---
+  const chalkmanTable = {
+    50: [40, 40, 50, 60, 60, 60, 60, 60],
+    70: [40, 50, 60, 60, 60, 60, 60, 60],
+    100: [50, 50, 60, 60, 60, 100, 100, 100],
+    150: [50, 60, 60, 60, 100, 100, 100, 100],
+    200: [60, 60, 60, 100, 100, 100, 100, 100],
+    250: [60, 60, 60, 100, 100, 100, 100, 150],
+    300: [60, 60, 60, 100, 100, 100, 100, 150],
+    350: [60, 60, 60, 100, 100, 100, 100, 150],
+    400: [60, 60, 100, 100, 150, 100, 100, 200],
+    500: [60, 60, 100, 100, 200, 200, 200, 200],
+    1000: [60, 60, 100, 200, 200, 200, 200, 200],
+  };
+
+  const form = document.getElementById("poolForm");
+  const resultDiv = document.getElementById("result");
+  const playNextCheckbox = document.getElementById("playNext");
+  const nextGameStakeDiv = document.getElementById("nextGameStakeDiv");
+
+  playNextCheckbox.addEventListener("change", () => {
+    nextGameStakeDiv.classList.toggle("hidden", !playNextCheckbox.checked);
+  });
+
+  const stakeInput = document.getElementById("stake");
+  const playersInput = document.getElementById("players");
+  const chalkmanOpenedCheckbox = document.getElementById("chalkmanOpened");
+  const chalkmanPayInput = document.getElementById("chalkmanPay");
+
+  function getChalkmanPay(stake, players, opened) {
+    const stakeKeys = Object.keys(chalkmanTable).map(Number);
+    let selectedStake = stakeKeys.find(s => stake <= s) || 1000;
+    const row = chalkmanTable[selectedStake];
+    let index = players >= 9 ? 7 : Math.max(players - 2, 0);
+    let basePay = row[index];
+    if (!opened) basePay -= 30;
+    return Math.max(basePay, 0);
+  }
+
+  function updateChalkmanPay() {
+    const stake = parseFloat(stakeInput.value);
+    const players = parseInt(playersInput.value);
+    const opened = chalkmanOpenedCheckbox.checked;
+    if (stake && players) {
+      const pay = getChalkmanPay(stake, players, opened);
+      chalkmanPayInput.value = pay.toFixed(2);
+    }
+  }
+
+  stakeInput.addEventListener("input", updateChalkmanPay);
+  playersInput.addEventListener("input", updateChalkmanPay);
+  chalkmanOpenedCheckbox.addEventListener("change", updateChalkmanPay);
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const chalkmanOpened = chalkmanOpenedCheckbox.checked;
+    const stake = parseFloat(stakeInput.value);
+    const players = parseInt(playersInput.value);
+    const chalkmanPay = parseFloat(chalkmanPayInput.value);
+    const debtInput = document.getElementById("debt").value.trim();
+    const notEaten = parseInt(document.getElementById("notEaten").value);
+    const playNext = playNextCheckbox.checked;
+    const nextGameStake = playNext ? parseFloat(document.getElementById("nextGameStake").value) || 0 : 0;
+
+    // Parse + or - sign for debt
+    let debt = parseFloat(debtInput);
+    if (isNaN(debt)) debt = 0; // default to 0 if blank
+
+    let totalStake = stake * players;
+    if (!chalkmanOpened) totalStake -= 30;
+
+    const moneyReturned = stake * notEaten;
+    const X = totalStake - (chalkmanPay + moneyReturned);
+
+    // If user entered negative value (-50), it means they owe → subtract.
+    // If positive (+100), it means they are owed → add.
+    const Y = X + debt;
+
+    const finalAmount = playNext ? Y - nextGameStake : Y;
+
+    document.getElementById("totalStake").textContent = `💰 Total Stake: Ksh ${totalStake.toFixed(2)}`;
+    document.getElementById("winnerAmount").textContent = `🏆 Winner's Base Amount (before next game): Ksh ${Y.toFixed(2)}`;
+    document.getElementById("chalkmanPaid").textContent = `🧮 Chalkman Paid: Ksh ${chalkmanPay.toFixed(2)}`;
+    document.getElementById("finalAmount").textContent = playNext
+      ? `🎯 Final Amount After Staking Next Game: Ksh ${finalAmount.toFixed(2)}`
+      : `🎯 Final Amount: Ksh ${finalAmount.toFixed(2)}`;
+    resultDiv.classList.remove("hidden");
+  });
+</script>
+
+</body>
+</html>

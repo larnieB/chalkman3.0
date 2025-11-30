@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pool Game Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+  <button id="installBtn" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 18px;
+  border: none;
+  background: black;
+  color: white;
+  font-size: 16px;
+  border-radius: 8px;
+  display: none;
+  z-index: 9999;
+">
+  Install App
+</button>
+
+
+  <!-- Terms and Conditions Modal -->
+  <div id="termsModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-6 rounded-xl max-w-lg w-full text-white">
+      <h2 class="text-2xl font-bold text-center text-emerald-400 mb-4">Terms & Conditions</h2>
+      <div class="h-64 overflow-y-auto text-sm bg-gray-900 p-3 rounded border border-gray-700 mb-4">
+        <p class="mb-2">
+          Created by Charles Ndung'u. This web application and all associated files, functionalities, future updates, and add-ons are the 
+          intellectual and digital property of <strong>CND Innovations</strong>. 
+          Use of this application is permitted only within its intended functionalities. 
+        </p>
+        <p class="mb-2">
+          You agree not to modify, copy, redistribute, or use this software or its components for 
+          purposes other than those provided by the application.
+        </p>
+        <p class="mb-2">
+          CND Innovations reserves all rights to update, improve, or commercialize this project at its discretion. 
+          Users acknowledge that continued use implies acceptance of these and future updates to the Terms. 
+        </p>
+        <p class="mb-2">
+          This notice does not constitute a legal contract and is provided for general informational purposes only. 
+          Please review and adapt with professional legal advice for your jurisdiction if necessary.
+        </p>
+      </div>
+      <div class="flex justify-between">
+        <button id="disagreeBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-semibold">I Don’t Agree</button>
+        <button id="agreeBtn" class="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-lg font-semibold">I Agree</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="appContent" class="bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-md hidden">
+    <h1 class="text-2xl font-bold text-center mb-6 text-emerald-400">🎱 Pool Game Calculator</h1>
+    
+    <form id="poolForm" class="space-y-4">
+      <div class="flex items-center">
+        <input id="chalkmanOpened" type="checkbox" class="mr-2">
+        <label for="chalkmanOpened">Ni chalkman alifungua game?</label>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Individual Stake (Ksh)</label>
+        <input id="stake" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 100" required>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Number of Players</label>
+        <input id="players" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 5" required>
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">Chalkman Payment (auto-calculated)</label>
+        <input id="chalkmanPay" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" readonly>
+      </div>
+
+      <div class="relative">
+  <label class="block text-sm mb-1">ulikuwa pesa ngapi (Ksh)</label>
+  <input
+    id="debt"
+    type="text"
+    class="w-full p-2 rounded bg-gray-700 border border-gray-600"
+    placeholder="e.g. +200 or -200"
+    required
+    oninput="showDebtDropdown(this.value)"
+    onfocus="showDebtDropdown(this.value)"
+    onblur="hideDebtDropdown()"
+  >
+  <div
+    id="debtDropdown"
+    class="absolute left-0 right-0 bg-gray-800 border border-gray-600 rounded mt-1 hidden z-20"
+  ></div>
+</div>
+
+      <div>
+        <label class="block text-sm mb-1">umerudisha watu wangapi.</label>
+        <input id="notEaten" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 1" required>
+      </div>
+
+      <div class="flex items-center">
+        <input id="playNext" type="checkbox" class="mr-2">
+        <label for="playNext">Will the winner play the next game?</label>
+      </div>
+
+      <div id="nextGameStakeDiv" class="hidden">
+        <label class="block text-sm mb-1">Next Game Stake (Ksh)</label>
+        <input id="nextGameStake" type="number" class="w-full p-2 rounded bg-gray-700 border border-gray-600" placeholder="e.g. 100">
+      </div>
+
+      <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-lg font-semibold">
+        Calculate
+      </button>
+    </form>
+
+    <div id="result" class="mt-6 hidden bg-gray-700 p-4 rounded-lg">
+      <h2 class="text-xl font-semibold mb-2 text-emerald-400">Results</h2>
+      <p id="totalStake"></p>
+      <p id="winnerAmount"></p>
+      <p id="chalkmanPaid"></p>
+      <p id="finalAmount"></p>
+    </div>
+  </div>
+
+  <script>
+  // --- Terms modal logic ---
+  const termsModal = document.getElementById("termsModal");
+  const agreeBtn = document.getElementById("agreeBtn");
+  const disagreeBtn = document.getElementById("disagreeBtn");
+  const appContent = document.getElementById("appContent");
+
+  agreeBtn.addEventListener("click", () => {
+    termsModal.classList.add("hidden");
+    appContent.classList.remove("hidden");
+  });
+
+  disagreeBtn.addEventListener("click", () => {
+    alert("You must agree to continue. The app will now close.");
+    window.close();
+    window.location.href = "about:blank";
+  });
+
+  // --- Calculator logic ---
+  const chalkmanTable = {
+    50: [40, 40, 50, 60, 60, 60, 60, 60],
+    70: [40, 50, 60, 60, 60, 60, 60, 60],
+    100: [50, 50, 60, 60, 60, 100, 100, 100],
+    150: [50, 60, 60, 60, 100, 100, 100, 100],
+    200: [60, 60, 60, 100, 100, 100, 100, 100],
+    250: [60, 60, 60, 100, 100, 100, 100, 150],
+    300: [60, 60, 60, 100, 100, 100, 100, 150],
+    350: [60, 60, 60, 100, 100, 100, 100, 150],
+    400: [60, 60, 100, 100, 150, 100, 100, 200],
+    500: [60, 60, 100, 100, 200, 200, 200, 200],
+    1000: [60, 60, 100, 200, 200, 200, 200, 200],
+  };
+
+  const form = document.getElementById("poolForm");
+  const resultDiv = document.getElementById("result");
+  const playNextCheckbox = document.getElementById("playNext");
+  const nextGameStakeDiv = document.getElementById("nextGameStakeDiv");
+
+  playNextCheckbox.addEventListener("change", () => {
+    nextGameStakeDiv.classList.toggle("hidden", !playNextCheckbox.checked);
+  });
+
+  const stakeInput = document.getElementById("stake");
+  const playersInput = document.getElementById("players");
+  const chalkmanOpenedCheckbox = document.getElementById("chalkmanOpened");
+  const chalkmanPayInput = document.getElementById("chalkmanPay");
+
+  function getChalkmanPay(stake, players, opened) {
+    const stakeKeys = Object.keys(chalkmanTable).map(Number);
+    let selectedStake = stakeKeys.find(s => stake <= s) || 1000;
+    const row = chalkmanTable[selectedStake];
+    let index = players >= 9 ? 7 : Math.max(players - 2, 0);
+    let basePay = row[index];
+    if (!opened) basePay -= 30;
+    return Math.max(basePay, 0);
+  }
+
+  function updateChalkmanPay() {
+    const stake = parseFloat(stakeInput.value);
+    const players = parseInt(playersInput.value);
+    const opened = chalkmanOpenedCheckbox.checked;
+    if (stake && players) {
+      const pay = getChalkmanPay(stake, players, opened);
+      chalkmanPayInput.value = pay.toFixed(2);
+    }
+  }
+
+ 
+  function updateDebtOptions(value) {
+    const datalist = document.getElementById("debtOptions");
+    datalist.innerHTML = ""; // clear previous options
+    const cleanValue = value.replace(/[^\d.]/g, ""); // remove non-numeric symbols
+    if (cleanValue) {
+      const plusOption = document.createElement("option");
+      plusOption.value = `+${cleanValue}`;
+      const minusOption = document.createElement("option");
+      minusOption.value = `-${cleanValue}`;
+      datalist.appendChild(plusOption);
+      datalist.appendChild(minusOption);
+    }
+  }
+  // --- Custom + / - dropdown for debt field ---
+const debtInput = document.getElementById("debt");
+const dropdown = document.getElementById("debtDropdown");
+
+function showDebtDropdown(value) {
+  dropdown.innerHTML = "";
+  const clean = value.replace(/[^\d.]/g, "");
+  if (!clean) {
+    dropdown.classList.add("hidden");
+    return;
+  }
+
+  const plus = `+${clean}`;
+  const minus = `-${clean}`;
+
+  const options = [plus, minus];
+  options.forEach(opt => {
+    const div = document.createElement("div");
+    div.textContent = opt;
+    div.className = "px-3 py-2 hover:bg-gray-700 cursor-pointer";
+    div.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      debtInput.value = opt;
+      dropdown.classList.add("hidden");
+    });
+    dropdown.appendChild(div);
+  });
+
+  dropdown.classList.remove("hidden");
+}
+
+function hideDebtDropdown() {
+  setTimeout(() => dropdown.classList.add("hidden"), 150);
+}
+
+
+
+
+  stakeInput.addEventListener("input", updateChalkmanPay);
+  playersInput.addEventListener("input", updateChalkmanPay);
+  chalkmanOpenedCheckbox.addEventListener("change", updateChalkmanPay);
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const chalkmanOpened = chalkmanOpenedCheckbox.checked;
+    const stake = parseFloat(stakeInput.value);
+    const players = parseInt(playersInput.value);
+    const chalkmanPay = parseFloat(chalkmanPayInput.value);
+    const debtInput = document.getElementById("debt").value.trim();
+    const notEaten = parseInt(document.getElementById("notEaten").value);
+    const playNext = playNextCheckbox.checked;
+    const nextGameStake = playNext ? parseFloat(document.getElementById("nextGameStake").value) || 0 : 0;
+
+    // Parse + or - sign for debt
+    let debt = parseFloat(debtInput);
+    if (isNaN(debt)) debt = 0; // default to 0 if blank
+
+    let totalStake = stake * players;
+    if (!chalkmanOpened) totalStake -= 30;
+
+    const moneyReturned = stake * notEaten;
+    const X = totalStake - (chalkmanPay + moneyReturned);
+
+    // If user entered negative value (-50), it means they owe → subtract.
+    // If positive (+100), it means they are owed → add.
+    const Y = X + debt;
+
+    const finalAmount = playNext ? Y - nextGameStake : Y;
+
+    document.getElementById("totalStake").textContent = `💰 Total Stake: Ksh ${totalStake.toFixed(2)}`;
+    document.getElementById("winnerAmount").textContent = `🏆 Winner's Base Amount (before next game): Ksh ${Y.toFixed(2)}`;
+    document.getElementById("chalkmanPaid").textContent = `🧮 Chalkman Paid: Ksh ${chalkmanPay.toFixed(2)}`;
+    document.getElementById("finalAmount").textContent = playNext
+      ? `🎯 Final Amount After Staking Next Game: Ksh ${finalAmount.toFixed(2)}`
+      : `🎯 Final Amount: Ksh ${finalAmount.toFixed(2)}`;
+    resultDiv.classList.remove("hidden");
+  });
+</script>
+<script>
+  // Register Service Worker
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+  }
+
+  // Install button logic
+  let deferredPrompt;
+  const installBtn = document.getElementById("installBtn");
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = "block";
+  });
+
+  installBtn.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.style.display = "none";
+  });
+</script>
+
+
+</body>
+</html>
